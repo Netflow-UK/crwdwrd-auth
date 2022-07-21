@@ -4,6 +4,6 @@ services:
     container_name: crwdid
     image: php:8.0-apache
     volumes:
-      - ./var/www/html/
+      - ./:/var/www/html/
     ports:
       - 8080:80
