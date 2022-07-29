@@ -1,34 +1,39 @@
 <?php
 require 'vendor/autoload.php';
+use Jumbojett\OpenIDConnectClient;
+session_start();
 
-$issuer = 'https://auth.dev.crwd.id';
-$cid = '0f219f24-9d9e-408a-9e44-c9552b714081';
-$secret = null;
-$oidc = new Jumbojett\OpenIDConnectClient($issuer, $cid, $secret);
-
-$oidc->setResponseTypes(array("id_token", "code"));
-$oidc->addScope(array('openid'));
-$oidc->setAllowImplicitFlow(true);
-//$oidc->addAuthParam(array('response_mode' => 'form_post'));
+$oidc = new OpenIDConnectClient(
+  'https://auth.dev.crwd.id',
+  'cc7abc7a-9879-43e0-843b-141ea7b56ffb',
+  null,
+);
 $oidc->setVerifyHost(false);
 $oidc->setVerifyPeer(false);
-$oidc->redirect("http://localhost:3001/callback");
-$oidc->addScope('openid');
-$oidc->authenticate();
-$oidc->requestUserInfo('sub');
+$oidc->setHttpUpgradeInsecureRequests(false);
+// $oidc->setHttpProxy("http://host.docker.internal:4000/");
+$oidc->setRedirectURL("http://localhost:3000");
+$oidc->setCodeChallengeMethod('S256');
 
-$session = array();
-foreach ($oidc as $key => $value) {
-    if (is_array($value)) {
-        $v = implode(', ', $value);
-    } else {
-        $v = $value;
+
+if (!isset($_SESSION['id_token'])) {
+  $oidc->authenticate();
+  $_SESSION['sub'] = $oidc->requestUserInfo('sub');
+  $_SESSION['email'] = $oidc->requestUserInfo('email');
+  $session = array();
+  foreach($oidc as $key=> $value) {
+    if(is_array($value)){
+      $v = implode(', ', $value);
+    }else{
+      $v = $value;
     }
     $session[$key] = $v;
+  }
+  $_SESSION['attributes'] = $session;
+  $_SESSION['access_token'] = $oidc->getAccessToken();
+  $_SESSION['refresh_token'] = $oidc->getRefreshToken();
+  $_SESSION['id_token'] = $oidc->getIdToken();
 }
 
-
-session_start();
-$_SESSION['attributes'] = $session;
 
 header("Location: ./attributes.php");
